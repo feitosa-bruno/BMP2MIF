@@ -1,0 +1,40 @@
+<!DOCTYPE HTML>
+<html lang="pt-br" xml:lang="pt-br" xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" type="text/css" href="../style/index.css">
+</head>
+
+<body>
+	<div id="header" class="app_header">
+		<strong>BMP File</strong><br>
+		Select BMP File:
+		<input class="input_box" type="file" id="input" name="image[]" accept=".bmp" single/>
+	</div>
+	<div class="row center_block">
+		<div class="column50">
+			<img class="input_image" id="input_image" src="" alt="">
+		</div>
+		<div class="column50">
+			<div class="button_container">
+				<button class="button" id="output_file" type="button">
+					.mif File	
+				</button>			
+			</div>
+			<div class="output_text">
+				<output id="output"></output>
+			</div>
+		</div>	
+	</div>
+	<div class="footer">
+			This APP is using Node
+			<script>document.write(process.versions.node)</script>,
+			Chrome
+			<script>document.write(process.versions.chrome)</script>, and Electron
+			<script>document.write(process.versions.electron)</script>
+	</div>	
+	<script src="../scripts/index.js"></script>
+</body>
+
+</html>
