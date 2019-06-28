@@ -1,0 +1,31 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"LineCount.excludes": [
+			"**/.vscode/**",
+			"**/.scripts/**",
+			"**/node_modules/**",
+			"**/release-builds/**",
+			"**/.out/**",
+			"**/package-lock.json",
+			"**/package.json",
+			"**/*.code-workspace",
+			"**/*.txt",
+			"**/*.db",
+		],
+		"LineCount.output": {
+			"txt": false,
+			"json": false,
+			"csv": false,
+			"md": true,
+			"outdir": ".out"
+		},
+		"cSpell.words": [
+		],
+		"cSpell.language": "en,pt-BR"
+	}
+}
