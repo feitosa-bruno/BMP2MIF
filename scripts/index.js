@@ -10,6 +10,8 @@ const appDir				= require('electron').remote.app.getAppPath();
 const _DS					= require(`${appDir}/scripts/DOM_info`)._DS;
 const _HTMLClasses			= require(`${appDir}/scripts/DOM_info`)._HTMLClasses;
 const toMIFLine				= require(`${appDir}/scripts/auxiliary/toMIFLine`);
+const toHEXLine				= require(`${appDir}/scripts/auxiliary/toHEXLine`);
+const writeMIFHeader		= require(`${appDir}/scripts/auxiliary/writeMIFHeader`);
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -19,9 +21,15 @@ const toMIFLine				= require(`${appDir}/scripts/auxiliary/toMIFLine`);
 
 class GlobalController {
     constructor () {
-		this.controlsEnabled	= true;
-		this.outputFile			= null;
-		this.outputFilename		= null;
+		this.controlsEnabled		= true;
+		this.outputFile				= null;
+		this.outputFilename			= null;
+		this.bmpBuffer				= null;
+		this.decodedBMP				= null;
+		this.grayscalePalletVector	= null;
+		this.outputBuffer			= null;
+		this.parsedFilename			= "";
+
     }
 
 	setupEventListeners () {
@@ -40,10 +48,6 @@ class GlobalController {
         document
         .getElementById(_DS.fileOutput)
         .addEventListener('click', this.saveOutputFile.bind(this), false);
-
-		// Escape Key Event Listener
-		// Closes window when Escape Key is Pressed and Released
-		window.onkeyup = this.escKeyPressed.bind(this);
 	}
 
 	toggleControls(state) {
@@ -72,46 +76,35 @@ class GlobalController {
 	}
 
 	convertBitmapFile(file) {
-		var bmpBuffer		= fs.readFileSync(file.path);	// Reads file
-		var parsedFilename	= file.path;
-		var decodedBMP;
-		var grayscalePalletVector;
-		var outputBuffer;
-		var outputFilename;
+		this.bmpBuffer		= fs.readFileSync(file.path);	// Reads file
+		this.parsedFilename	= file.path;
 
-		// console.log(bmpBuffer);
+		// console.log(this.bmpBuffer);
 
 		// Decode BMP file
-		decodedBMP = this.decode(bmpBuffer);
+		this.decodedBMP = this.decode(this.bmpBuffer);
 		// console.log(decodedBMP);
 
-		if (decodedBMP === false) return;	// Exit in case of failure
+		if (this.decodedBMP === false) return;	// Exit in case of failure
 
-		this.setParsedImage(parsedFilename);
+		this.setParsedImage(this.parsedFilename);
 
 		// Convert to 8-bit Grayscale Array
-		grayscalePalletVector = this.convertToGrayscale(decodedBMP.palette);
+		this.grayscalePalletVector = this.convertToGrayscale(this.decodedBMP);
 
 		// Convert 8-bit Grayscale Array to Buffer
-		outputBuffer = this.convertToBuffer(grayscalePalletVector);
+		this.outputBuffer = this.convertToBuffer(this.grayscalePalletVector, this.decodedBMP);
 
-		// Get Output Filename
-		outputFilename = this.getOutputFilename(parsedFilename);
+		// Set Output Filename
+		this.outputFilename = this.getOutputFilename(this.parsedFilename);
 
 		// Set Output for File Saving
-		this.setOutput(outputBuffer, outputFilename);
+		this.setOutput(this.outputBuffer);
 	}
 
 	decode(buffer) {
 		try {
-			var buffer = BMP.decode(buffer);
-			if (buffer.bitPP == 8) {
-				return buffer;
-			} else {
-				console.error("Not an 8-bit BMP File.");
-				alert("Not an 8-bit BMP File.");
-				return false;
-			}
+			return BMP.decode(buffer);
 		} catch (err) {
 			console.error(`Error: ${err.message}`);
 			alert(`Error: ${err.message}`);
@@ -125,17 +118,26 @@ class GlobalController {
 		imageElement.alt = filename.slice(filename.lastIndexOf("\\") + 1);
 	}
 
-	convertToGrayscale (palletVector) {
-		return palletVector.map(el => {
-			return (((el.red + el.green + el.blue) / 3) | 0);
-		});
+	convertToGrayscale (dcdBuff) {
+		var outputVector = [];
+		// 4 bytes: ABGR (Alpha, Blue, Green, Red)
+		for (var i=0; i < dcdBuff.data.length; i+=4) {
+			outputVector.push(
+				((dcdBuff.data[i+1] + dcdBuff.data[i+2] + dcdBuff.data[i+3])/3 | 0)
+			);
+		}
+		return outputVector;
 	}
 
-	convertToBuffer (vector) {
-		var output = "";
+	convertToBuffer (vector, decoded) {
+		var depth = ((decoded.width * decoded.height) | 0);
+		var output = `${writeMIFHeader(depth, 8)}`;
+		output = `${output}\r\n\r\nCONTENT\r\nBEGIN\r\n\r\n`;
 		for (var i in vector) {
-			output = `${output}${toMIFLine(vector[i])}\r\n`;
+			output = `${output}${toMIFLine(i, vector[i], depth)}\r\n`;
+			// output = `${output}${toHEXLine(vector[i])}\r\n`;
 		}
+		output = `${output}\r\nEND;`;
 		return output;
 	}
 
@@ -146,19 +148,12 @@ class GlobalController {
 		)}.mif`;
 	}
 
-	escKeyPressed (event) {
-		if (event.key == "Escape") {
-			close();
-		}
-	}
-
-	setOutput (buffer, filename) {
+	setOutput (buffer) {
 		// Visualize Buffer on page
 		document.getElementById(_DS.outputString).innerHTML = buffer;
 
 		// Set Output File and Filename to Program
 		this.outputFile = new Blob([buffer], {type: "text/plain;charset=utf-8"});
-		this.outputFilename = filename;		
 
 		// Enable Controls
 		this.toggleControls(true);
