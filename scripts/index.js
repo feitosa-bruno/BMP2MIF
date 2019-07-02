@@ -9,9 +9,25 @@ const FileSaver				= require("file-saver");
 const appDir				= require('electron').remote.app.getAppPath();
 const _DS					= require(`${appDir}/scripts/DOM_info`)._DS;
 const _HTMLClasses			= require(`${appDir}/scripts/DOM_info`)._HTMLClasses;
+const Stopwatch				= require(`${appDir}/scripts/classes/Stopwatch`);
+const CNNFilter				= require(`${appDir}/scripts/classes/CNNFilter`);
 const toMIFLine				= require(`${appDir}/scripts/auxiliary/toMIFLine`);
 const toHEXLine				= require(`${appDir}/scripts/auxiliary/toHEXLine`);
 const writeMIFHeader		= require(`${appDir}/scripts/auxiliary/writeMIFHeader`);
+
+
+let imageConversionStopwatch = new Stopwatch("Image Conversion");
+let CNNFilterApplication = new Stopwatch("CNN Filter Application");
+const _W0 = [
+	[ 1, -1, -1],
+	[-1,  0,  0],
+	[-1, -1,  0]
+];
+const _W1 = [
+	[ 0,  0,  1],
+	[ 1,  1,  0],
+	[ 0,  0,  0]
+];
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -26,10 +42,10 @@ class GlobalController {
 		this.outputFilename			= null;
 		this.bmpBuffer				= null;
 		this.decodedBMP				= null;
-		this.grayscalePalletVector	= null;
+		this.grayscaleVector	= null;
 		this.outputBuffer			= null;
 		this.parsedFilename			= "";
-
+		this.CNNFilter				= null;
     }
 
 	setupEventListeners () {
@@ -72,10 +88,14 @@ class GlobalController {
 			return;
 		} else {
 			this.convertBitmapFile(file);
+			
+			this.applyCNNFilter(this.decodedBMP);
 		}
 	}
 
 	convertBitmapFile(file) {
+		imageConversionStopwatch.start();
+
 		this.bmpBuffer		= fs.readFileSync(file.path);	// Reads file
 		this.parsedFilename	= file.path;
 
@@ -90,16 +110,27 @@ class GlobalController {
 		this.setParsedImage(this.parsedFilename);
 
 		// Convert to 8-bit Grayscale Array
-		this.grayscalePalletVector = this.convertToGrayscale(this.decodedBMP);
+		this.grayscaleVector = this.convertToGrayscale(this.decodedBMP);
 
 		// Convert 8-bit Grayscale Array to Buffer
-		this.outputBuffer = this.convertToBuffer(this.grayscalePalletVector, this.decodedBMP);
+		this.outputBuffer = this.convertToBuffer(this.grayscaleVector, this.decodedBMP);
 
 		// Set Output Filename
 		this.outputFilename = this.getOutputFilename(this.parsedFilename);
 
 		// Set Output for File Saving
 		this.setOutput(this.outputBuffer);
+
+		imageConversionStopwatch.stop();
+	}
+
+	applyCNNFilter (decodedBMP) {
+		this.CNNFilter = new CNNFilter(decodedBMP, _W0, _W1);
+		this.CNNFilter.initializeImageMatrix();
+
+		CNNFilterApplication.start();
+		this.CNNFilter.process();
+		CNNFilterApplication.stop();
 	}
 
 	decode(buffer) {
