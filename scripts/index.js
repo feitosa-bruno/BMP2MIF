@@ -46,6 +46,8 @@ class GlobalController {
 		this.outputBuffer			= null;
 		this.parsedFilename			= "";
 		this.CNNFilter				= null;
+		this.tests					= null;
+		this.filteredTests			= null;
     }
 
 	setupEventListeners () {
@@ -127,10 +129,31 @@ class GlobalController {
 	applyCNNFilter (decodedBMP) {
 		this.CNNFilter = new CNNFilter(decodedBMP, _W0, _W1);
 		this.CNNFilter.initializeImageMatrix();
-
-		CNNFilterApplication.start();
-		this.CNNFilter.process();
-		CNNFilterApplication.stop();
+	
+		this.tests = [];
+		for (var i = 0; i < 1000.; i++) {
+			CNNFilterApplication.start();
+			this.CNNFilter.process();
+			this.tests.push(CNNFilterApplication.stop("silent"));
+		}
+		console.log(Math.min(...this.tests));
+		console.log(Math.max(...this.tests));
+		console.log(this.tests.reduce((a, b) => a+b, 0)/this.tests.length);
+		console.log(this.tests.length);
+		this.filteredTests = this.tests.filter((value) =>{
+			return (value < Math.max(...this.tests)) && (value > Math.min(...this.tests))
+		});
+		console.log(Math.min(...this.filteredTests));
+		console.log(Math.max(...this.filteredTests));
+		console.log(this.filteredTests.reduce((a, b) => a+b, 0)/this.filteredTests.length);
+		console.log(this.filteredTests.length);
+		this.filteredTests = this.filteredTests.filter((value) =>{
+			return (value < Math.max(...this.filteredTests)) && (value > Math.min(...this.filteredTests))
+		});
+		console.log(Math.min(...this.filteredTests));
+		console.log(Math.max(...this.filteredTests));
+		console.log(this.filteredTests.reduce((a, b) => a+b, 0)/this.filteredTests.length);
+		console.log(this.filteredTests.length);		
 	}
 
 	decode(buffer) {
@@ -180,8 +203,8 @@ class GlobalController {
 	}
 
 	setOutput (buffer) {
-		// Visualize Buffer on page
-		document.getElementById(_DS.outputString).innerHTML = buffer;
+		// // Visualize Buffer on page
+		// document.getElementById(_DS.outputString).innerHTML = buffer;
 
 		// Set Output File and Filename to Program
 		this.outputFile = new Blob([buffer], {type: "text/plain;charset=utf-8"});

@@ -15,14 +15,17 @@ class Stopwatch {
 		}
 	}
 
-	stop () {
+	stop (method) {
 		if(this.isRunning){
 			this.t1 = performance.now();
-			console.log(`${this.name} took ${this.someTime((this.t1 - this.t0), 2)}`);
+			if (method != "silent")
+				console.log(`${this.name} took ${this.someTime((this.t1 - this.t0), 2)}`);
 			this.isRunning = false;
 		} else {
 			console.warn(`Stopwatch for '${this.name}' is stopped.`);
 		}
+
+		return (this.t1 - this.t0);
 	}
 
 	// Math can't round decimals by standard, so "I" hacked it
